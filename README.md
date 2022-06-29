@@ -8,6 +8,16 @@ Simple static page using Preact and PDF.js to convert PDFs into PNG files all wi
 
 The site is automatically deployed to [apexal.github.io/pdf-to-png](https://apexal.github.io/pdf-to-png) on each push to master via a [GitHub Action](https://github.com/Apexal/pdf-to-png/actions).
 
+## Planned Features
+
+- [x] Upload PDFs
+- [x] Convert each page in PDF to PNG
+- [x] Display page PNG sizes
+- [x] Download all PNGs in ZIP
+- [ ] Choose quality level
+- [ ] Set maximum PNG dimensions
+- [ ] Option to cut pages into chunks
+
 ## Developing
 
 `npm install`

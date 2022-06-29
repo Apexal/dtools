@@ -175,7 +175,7 @@ export function App() {
     const zip = new JSZip();
 
     for (const page of pdf.pages) {
-      if (!page.error) {
+      if (!page.error && page.blob) {
         zip.file(`${pdf.name}-page-${page.pageNumber}.png`, page.blob);
       }
     }

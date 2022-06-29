@@ -2,9 +2,11 @@ import * as pdfLib from "pdfjs-dist";
 import { TypedArray } from "pdfjs-dist/types/src/display/api";
 import { useCallback, useRef, useState } from "preact/hooks";
 
-pdfLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
+pdfLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js";
 
 export function App() {
+  // @ts-ignore
   const canvas = useRef<OffscreenCanvas>(new OffscreenCanvas(100, 100));
   const [pageObjectUrls, setPageObjectUrls] = useState<string[]>([]);
 

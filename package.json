@@ -1,15 +1,14 @@
 {
   "name": "pdf-to-png",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "pdfjs-dist": "^2.14.305",
-    "@types/offscreencanvas": "^2019.7.0",
+    "pdfjs-dist": "2.14.305",
     "preact": "^10.5.15"
   },
   "devDependencies": {

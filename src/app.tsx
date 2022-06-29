@@ -33,7 +33,7 @@ export function App() {
         const file = ev.currentTarget.files[0];
 
         // Ensure it is a PDF
-        if (file.type && file.type.endsWith("pdf")) {
+        if (file.type && !file.type.endsWith("pdf")) {
           alert("File is not a PDF.");
           return;
         }

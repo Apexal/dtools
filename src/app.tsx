@@ -6,7 +6,6 @@ pdfLib.GlobalWorkerOptions.workerSrc =
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js";
 
 export function App() {
-  // @ts-ignore
   const canvas = useRef<OffscreenCanvas>(new OffscreenCanvas(100, 100));
   const [pageObjectUrls, setPageObjectUrls] = useState<string[]>([]);
 

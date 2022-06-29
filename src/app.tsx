@@ -16,9 +16,22 @@ type PDF = {
 
 type ConvertedPage = {
   pageNumber: number;
+  /** Local url to image (if success) */
   objectURL: string | null;
+  /** Size in bytes of image blob */
+  size: number;
+  /** Possible error that occurred when converting */
   error: Error | null;
 };
+
+function niceBytes(n: number) {
+  const units = ["bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+  let l = 0;
+  while (n >= 1024 && ++l) {
+    n = n / 1024;
+  }
+  return n.toFixed(n < 10 && l > 0 ? 1 : 0) + " " + units[l];
+}
 
 export function App() {
   // Refs
@@ -106,6 +119,7 @@ export function App() {
 
             const convertedPage: ConvertedPage = {
               pageNumber: pageNum,
+              size: 0,
               objectURL: null,
               error: null,
             };
@@ -118,7 +132,7 @@ export function App() {
               if (!pngBlob) {
                 throw new Error("Failed to convert to PNG.");
               }
-
+              convertedPage.size = pngBlob.size;
               convertedPage.objectURL = URL.createObjectURL(pngBlob);
             } catch (error) {
               console.error(error);
@@ -194,15 +208,23 @@ export function App() {
                     key={convertedPage.pageNumber}
                     title={`Click to download page ${convertedPage.pageNumber} as a PNG`}
                     class="text-center text-gray-700"
-                    href={convertedPage.objectURL}
-                    download={`${pdf?.name}-page-${convertedPage.pageNumber}.png`}
+                    href={convertedPage.objectURL ?? undefined}
+                    download={
+                      convertedPage.objectURL
+                        ? `${pdf?.name}-page-${convertedPage.pageNumber}.png`
+                        : false
+                    }
                   >
                     <div
-                      class="w-full h-24 bg-center bg-cover border-2 rounded-lg border-gray-700"
+                      class="w-full h-24 bg-center bg-cover border-2 rounded-lg border-gray-700 relative"
                       style={{
                         backgroundImage: `url(${convertedPage.objectURL})`,
                       }}
-                    />
+                    >
+                      <span className="text-xs absolute left-1 bottom-1 rounded bg-slate-600 text-white px-1 opacity-80">
+                        {niceBytes(convertedPage.size)}
+                      </span>
+                    </div>
                     Page {convertedPage.pageNumber}
                   </a>
                 ))}

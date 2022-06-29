@@ -1,7 +1,7 @@
 {
   "name": "pdf-to-png",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
@@ -13,7 +13,6 @@
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.1.5",
-    "@types/offscreencanvas": "^2019.7.0",
     "autoprefixer": "^10.4.7",
     "postcss": "^8.4.14",
     "tailwindcss": "^3.1.4",

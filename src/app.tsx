@@ -33,8 +33,8 @@ export function App() {
         const file = ev.currentTarget.files[0];
 
         // Ensure it is a PDF
-        if (file.type && file.type !== "image/pdf") {
-          console.log("File is not a PDF.", file.type, file);
+        if (file.type && file.type.endsWith("pdf")) {
+          alert("File is not a PDF.");
           return;
         }
 
@@ -54,6 +54,7 @@ export function App() {
           // Load PDF document into pdf.js
           const doc = await loadingTask.promise;
 
+          // Iterate through pages and render them to canvas to obtain image blob
           for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
             const page = await doc.getPage(pageNum);
 
@@ -72,15 +73,18 @@ export function App() {
             const pngBlob = await canvas.current.convertToBlob({
               type: "image/png",
             });
+
+            // Store image blob object URL
             newPageObjectUrls.push(URL.createObjectURL(pngBlob));
           }
 
           setPageObjectUrls(newPageObjectUrls);
         });
+
+        // Update progress of client upload
         reader.onprogress = (data) => {
           if (data.lengthComputable) {
             const dec = data.loaded / data.total;
-            console.log(dec);
 
             setUploadProgress(data.loaded / data.total);
           }
@@ -90,6 +94,7 @@ export function App() {
       [canvas, setPageObjectUrls]
     );
 
+  // Reset all state
   const restart = useCallback(() => {
     setPDFName(null);
     setPageObjectUrls([]);

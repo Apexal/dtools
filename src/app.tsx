@@ -1,6 +1,7 @@
 import * as pdfLib from "pdfjs-dist";
 import { TypedArray } from "pdfjs-dist/types/src/display/api";
 import { useCallback, useRef, useState } from "preact/hooks";
+import Progress from "./progress";
 
 pdfLib.GlobalWorkerOptions.workerSrc =
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js";
@@ -14,6 +15,8 @@ export function App() {
   const [pdfName, setPDFName] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [pageObjectUrls, setPageObjectUrls] = useState<string[]>([]);
+  const [pageCount, setPageCount] = useState<number>(0);
+  const [pagesConverted, setPagesConverted] = useState<number>(0);
 
   // Event handlers
   const handlePDFUpload: JSX.GenericEventHandler<HTMLInputElement> =
@@ -54,6 +57,8 @@ export function App() {
           // Load PDF document into pdf.js
           const doc = await loadingTask.promise;
 
+          setPageCount(doc.numPages);
+
           // Iterate through pages and render them to canvas to obtain image blob
           for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
             const page = await doc.getPage(pageNum);
@@ -73,6 +78,8 @@ export function App() {
             const pngBlob = await canvas.current.convertToBlob({
               type: "image/png",
             });
+
+            setPagesConverted((prev) => prev + 1);
 
             // Store image blob object URL
             newPageObjectUrls.push(URL.createObjectURL(pngBlob));
@@ -99,36 +106,25 @@ export function App() {
     setPDFName(null);
     setPageObjectUrls([]);
     setUploadProgress(0);
+    setPageCount(0);
+    setPagesConverted(0);
   }, []);
 
   return (
     <main class="relative text-center flex min-h-screen flex-col justify-center overflow-hidden bg-gray-50 py-6 sm:py-12">
       <div class="relative container  bg-white px-6 pt-10 pb-7 shadow-xl ring-1 ring-gray-900/5 sm:mx-auto sm:max-w-lg sm:rounded-lg sm:px-10">
         <div className="mx-auto max-w-md">
-          <h1 class="text-3xl font-bold mb-5">PDF → PNG</h1>
+          <h1 class="text-3xl font-bold mb-5">PDF → PNGs</h1>
 
-          <div
-            class={`rounded-full h-10 relative max-w-xl overflow-hidden ${
-              pdfName ? "" : "cursor-pointer"
-            }`}
+          <Progress
+            pdfName={pdfName}
+            value={uploadProgress * 25 + (pagesConverted / pageCount) * 75}
+            max={100}
             onClick={() => {
               if (pdfName) return;
               fileInput.current?.click();
             }}
-          >
-            <div class="w-full h-full bg-gray-200 absolute"></div>
-            <div
-              className="h-full bg-green-500 absolute transition-all duration-1000"
-              style={{ width: (uploadProgress * 100).toFixed(0) + "%" }}
-            ></div>
-            <div
-              class={`w-full top-1/2 -translate-y-1/2 absolute ${
-                pdfName ? "text-white" : "text-gray-500"
-              }`}
-            >
-              {pdfName ?? "Select PDF to Start"}
-            </div>
-          </div>
+          />
 
           <input
             ref={fileInput}
@@ -164,8 +160,7 @@ export function App() {
               </div>
             </div>
           )}
-
-          {pdfName && uploadProgress === 1 && (
+          {pdfName && pagesConverted === pageCount && (
             <button className="text-blue-400 underline" onClick={restart}>
               Restart
             </button>

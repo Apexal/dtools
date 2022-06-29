@@ -9,6 +9,7 @@ pdfLib.GlobalWorkerOptions.workerSrc =
 type PDF = {
   name: string;
   pageCount: number;
+  error: Error | null;
   uploadProgress: number;
   pages: ConvertedPage[];
 };
@@ -42,9 +43,18 @@ export function App() {
 
         const file = ev.currentTarget.files[0];
 
-        // Ensure it is a PDF
+        // Reset file input so we can select the same file again
+        ev.currentTarget.value = "";
+
+        // Ensure the selected file claims to be a PDF
         if (file.type && !file.type.endsWith("pdf")) {
-          alert("File is not a PDF.");
+          setPDF({
+            name: file.name.substring(0, file.name.lastIndexOf(".")),
+            uploadProgress: 0,
+            pageCount: 0,
+            pages: [],
+            error: new Error("File is not a PDF! Please select a PDF."),
+          });
           return;
         }
 
@@ -53,6 +63,7 @@ export function App() {
           uploadProgress: 0,
           pageCount: 0,
           pages: [],
+          error: null,
         });
 
         // Read file content
@@ -62,12 +73,20 @@ export function App() {
             return;
           }
 
-          const loadingTask = pdfLib.getDocument(
-            event.target!.result as TypedArray
-          );
-
-          // Load PDF document into pdf.js
-          const doc = await loadingTask.promise;
+          // Attempt to load PDF document into pdf.js
+          let doc: pdfLib.PDFDocumentProxy;
+          try {
+            doc = await pdfLib.getDocument(event.target!.result as TypedArray)
+              .promise;
+          } catch (error) {
+            // Probably not valid PDF
+            console.error(error);
+            setPDF((prevPDF) => ({
+              ...prevPDF!,
+              error: new Error("Invalid PDF. Please try another."),
+            }));
+            return;
+          }
 
           setPDF((prevPDF) => ({ ...prevPDF!, pageCount: doc.numPages }));
 
@@ -91,16 +110,20 @@ export function App() {
               error: null,
             };
 
-            await page.render(renderContext).promise;
-            const pngBlob = await new Promise((resolve: BlobCallback) =>
-              canvas.current!.toBlob(resolve, "image/png")
-            );
+            try {
+              await page.render(renderContext).promise;
+              const pngBlob = await new Promise((resolve: BlobCallback) =>
+                canvas.current!.toBlob(resolve, "image/png")
+              );
+              if (!pngBlob) {
+                throw new Error("Failed to convert to PNG.");
+              }
 
-            if (!pngBlob) {
-              continue;
+              convertedPage.objectURL = URL.createObjectURL(pngBlob);
+            } catch (error) {
+              console.error(error);
+              convertedPage.error = error as Error;
             }
-
-            convertedPage.objectURL = URL.createObjectURL(pngBlob);
 
             setPDF((prevPDF) => ({
               ...prevPDF!,
@@ -112,8 +135,6 @@ export function App() {
         // Update progress of client upload
         reader.onprogress = (data) => {
           if (data.lengthComputable) {
-            const dec = data.loaded / data.total;
-
             setPDF((prevPDF) => ({
               ...prevPDF!,
               uploadProgress: data.loaded / data.total,
@@ -124,11 +145,6 @@ export function App() {
       },
       [canvas, setPDF]
     );
-
-  // Reset all state
-  const restart = useCallback(() => {
-    setPDF(null);
-  }, []);
 
   const progressValue = pdf
     ? pdf?.uploadProgress * 25 + (pdf?.pages.length / pdf?.pageCount) * 75
@@ -141,12 +157,18 @@ export function App() {
           <h1 class="text-3xl font-bold mb-5">PDF → PNGs</h1>
 
           <Progress
-            pdfName={pdf?.name}
+            text={pdf?.name ?? "Select a PDF to Start"}
+            errorMessage={pdf?.error?.message}
             value={progressValue}
             max={100}
             onClick={() => {
-              if (pdf !== null) return;
-              fileInput.current?.click();
+              if (pdf === null || pdf.error) {
+                fileInput.current?.click();
+              } else if (
+                confirm("Reset? This will clear the pages you currently have.")
+              ) {
+                setPDF(null);
+              }
             }}
           />
 
@@ -160,14 +182,17 @@ export function App() {
             onChange={handlePDFUpload}
           />
 
+          {/* Hidden canvas for rendering */}
           <canvas class="hidden" ref={canvas}></canvas>
+
           {pdf && pdf.pages.length > 0 && (
             <div class="my-5">
-              <p class="mb-2 text-gray-500">Click on a page to download it.</p>
+              {/* <p class="mb-5 text-gray-500">Click on a page to download it.</p> */}
               <div class="grid grid-cols-3 gap-4">
                 {pdf.pages.map((convertedPage) => (
                   <a
                     key={convertedPage.pageNumber}
+                    title={`Click to download page ${convertedPage.pageNumber} as a PNG`}
                     class="text-center text-gray-700"
                     href={convertedPage.objectURL}
                     download={`${pdf?.name}-page-${convertedPage.pageNumber}.png`}
@@ -184,8 +209,11 @@ export function App() {
               </div>
             </div>
           )}
-          {pdf && pdf.pages.length === pdf.pageCount && (
-            <button className="text-blue-400 underline" onClick={restart}>
+          {pdf && !pdf.error && pdf.pages.length === pdf.pageCount && (
+            <button
+              className="text-blue-400 hover:text-blue-300 underline"
+              onClick={() => setPDF(null)}
+            >
               Reset
             </button>
           )}

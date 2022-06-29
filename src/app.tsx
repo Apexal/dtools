@@ -1,22 +1,31 @@
 import * as pdfLib from "pdfjs-dist";
 import { TypedArray } from "pdfjs-dist/types/src/display/api";
-import { useCallback, useRef, useState } from "preact/hooks";
+import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 import Progress from "./progress";
 
 pdfLib.GlobalWorkerOptions.workerSrc =
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js";
 
+type PDF = {
+  name: string;
+  pageCount: number;
+  uploadProgress: number;
+  pages: ConvertedPage[];
+};
+
+type ConvertedPage = {
+  pageNumber: number;
+  objectURL: string | null;
+  error: Error | null;
+};
+
 export function App() {
   // Refs
-  const canvas = useRef<OffscreenCanvas>(new OffscreenCanvas(100, 100));
+  const canvas = useRef<HTMLCanvasElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   // State
-  const [pdfName, setPDFName] = useState<string | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<number>(0);
-  const [pageObjectUrls, setPageObjectUrls] = useState<string[]>([]);
-  const [pageCount, setPageCount] = useState<number>(0);
-  const [pagesConverted, setPagesConverted] = useState<number>(0);
+  const [pdf, setPDF] = useState<PDF | null>(null);
 
   // Event handlers
   const handlePDFUpload: JSX.GenericEventHandler<HTMLInputElement> =
@@ -31,8 +40,6 @@ export function App() {
           return;
         }
 
-        const newPageObjectUrls: string[] = [];
-
         const file = ev.currentTarget.files[0];
 
         // Ensure it is a PDF
@@ -41,7 +48,12 @@ export function App() {
           return;
         }
 
-        setPDFName(file.name.substring(0, file.name.lastIndexOf(".")));
+        setPDF({
+          name: file.name.substring(0, file.name.lastIndexOf(".")),
+          uploadProgress: 0,
+          pageCount: 0,
+          pages: [],
+        });
 
         // Read file content
         const reader = new FileReader();
@@ -57,7 +69,7 @@ export function App() {
           // Load PDF document into pdf.js
           const doc = await loadingTask.promise;
 
-          setPageCount(doc.numPages);
+          setPDF((prevPDF) => ({ ...prevPDF!, pageCount: doc.numPages }));
 
           // Iterate through pages and render them to canvas to obtain image blob
           for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
@@ -73,19 +85,28 @@ export function App() {
               viewport,
             };
 
+            const convertedPage: ConvertedPage = {
+              pageNumber: pageNum,
+              objectURL: null,
+              error: null,
+            };
+
             await page.render(renderContext).promise;
+            const pngBlob = await new Promise((resolve: BlobCallback) =>
+              canvas.current!.toBlob(resolve, "image/png")
+            );
 
-            const pngBlob = await canvas.current.convertToBlob({
-              type: "image/png",
-            });
+            if (!pngBlob) {
+              continue;
+            }
 
-            setPagesConverted((prev) => prev + 1);
+            convertedPage.objectURL = URL.createObjectURL(pngBlob);
 
-            // Store image blob object URL
-            newPageObjectUrls.push(URL.createObjectURL(pngBlob));
+            setPDF((prevPDF) => ({
+              ...prevPDF!,
+              pages: [...prevPDF!.pages, convertedPage],
+            }));
           }
-
-          setPageObjectUrls(newPageObjectUrls);
         });
 
         // Update progress of client upload
@@ -93,22 +114,25 @@ export function App() {
           if (data.lengthComputable) {
             const dec = data.loaded / data.total;
 
-            setUploadProgress(data.loaded / data.total);
+            setPDF((prevPDF) => ({
+              ...prevPDF!,
+              uploadProgress: data.loaded / data.total,
+            }));
           }
         };
         reader.readAsArrayBuffer(file);
       },
-      [canvas, setPageObjectUrls]
+      [canvas, setPDF]
     );
 
   // Reset all state
   const restart = useCallback(() => {
-    setPDFName(null);
-    setPageObjectUrls([]);
-    setUploadProgress(0);
-    setPageCount(0);
-    setPagesConverted(0);
+    setPDF(null);
   }, []);
+
+  const progressValue = pdf
+    ? pdf?.uploadProgress * 25 + (pdf?.pages.length / pdf?.pageCount) * 75
+    : 0;
 
   return (
     <main class="relative text-center flex min-h-screen flex-col justify-center overflow-hidden bg-gray-50 py-6 sm:py-12">
@@ -117,11 +141,11 @@ export function App() {
           <h1 class="text-3xl font-bold mb-5">PDF → PNGs</h1>
 
           <Progress
-            pdfName={pdfName}
-            value={uploadProgress * 25 + (pagesConverted / pageCount) * 75}
+            pdfName={pdf?.name}
+            value={progressValue}
             max={100}
             onClick={() => {
-              if (pdfName) return;
+              if (pdf !== null) return;
               fileInput.current?.click();
             }}
           />
@@ -136,33 +160,33 @@ export function App() {
             onChange={handlePDFUpload}
           />
 
-          {pageObjectUrls.length > 0 && (
+          <canvas class="hidden" ref={canvas}></canvas>
+          {pdf && pdf.pages.length > 0 && (
             <div class="my-5">
-              <p class="mb-2 text-gray-500">
-                Click on the pages below to download them as PNGs.
-              </p>
+              <p class="mb-2 text-gray-500">Click on a page to download it.</p>
               <div class="grid grid-cols-3 gap-4">
-                {pageObjectUrls.map((url, index) => (
+                {pdf.pages.map((convertedPage) => (
                   <a
+                    key={convertedPage.pageNumber}
                     class="text-center text-gray-700"
-                    href={url}
-                    download={`${pdfName}-page-${index + 1}.png`}
+                    href={convertedPage.objectURL}
+                    download={`${pdf?.name}-page-${convertedPage.pageNumber}.png`}
                   >
                     <div
                       class="w-full h-24 bg-center bg-cover border-2 rounded-lg border-gray-700"
                       style={{
-                        backgroundImage: `url(${url})`,
+                        backgroundImage: `url(${convertedPage.objectURL})`,
                       }}
                     />
-                    Page {index + 1}
+                    Page {convertedPage.pageNumber}
                   </a>
                 ))}
               </div>
             </div>
           )}
-          {pdfName && pagesConverted === pageCount && (
+          {pdf && pdf.pages.length === pdf.pageCount && (
             <button className="text-blue-400 underline" onClick={restart}>
-              Restart
+              Reset
             </button>
           )}
         </div>

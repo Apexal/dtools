@@ -1,6 +1,6 @@
 /** Pseudo progress bar element that displays text and has an animated progress value. */
 export default function Progress(props: {
-  pdfName: string | null;
+  pdfName?: string;
   value: number;
   max: number;
   onClick: () => void;

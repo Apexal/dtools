@@ -1,3 +1,6 @@
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
+
 import * as pdfLib from "pdfjs-dist";
 import { TypedArray } from "pdfjs-dist/types/src/display/api";
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
@@ -16,6 +19,7 @@ type PDF = {
 
 type ConvertedPage = {
   pageNumber: number;
+  blob: Blob | null;
   /** Local url to image (if success) */
   objectURL: string | null;
   /** Size in bytes of image blob */
@@ -120,6 +124,7 @@ export function App() {
             const convertedPage: ConvertedPage = {
               pageNumber: pageNum,
               size: 0,
+              blob: null,
               objectURL: null,
               error: null,
             };
@@ -133,6 +138,7 @@ export function App() {
                 throw new Error("Failed to convert to PNG.");
               }
               convertedPage.size = pngBlob.size;
+              convertedPage.blob = pngBlob;
               convertedPage.objectURL = URL.createObjectURL(pngBlob);
             } catch (error) {
               console.error(error);
@@ -159,6 +165,18 @@ export function App() {
       },
       [canvas, setPDF]
     );
+
+  const downloadAll = useCallback(async () => {
+    if (!pdf) return;
+
+    const zip = new JSZip();
+
+    for (const page of pdf.pages) {
+      zip.file(`${pdf.name}-page-${page.pageNumber}.png`, page.blob);
+    }
+    const content = await zip.generateAsync({ type: "blob" });
+    saveAs(content, pdf.name + "-pages.zip");
+  }, [pdf]);
 
   const progressValue = pdf
     ? pdf?.uploadProgress * 25 + (pdf?.pages.length / pdf?.pageCount) * 75
@@ -232,12 +250,22 @@ export function App() {
             </div>
           )}
           {pdf && !pdf.error && pdf.pages.length === pdf.pageCount && (
-            <button
-              className="text-blue-400 hover:text-blue-300 underline"
-              onClick={() => setPDF(null)}
-            >
-              Reset
-            </button>
+            <>
+              <button
+                className="text-blue-400 hover:text-blue-300 underline mr-4"
+                onClick={() => setPDF(null)}
+                title={`Clear the current pages and start again.`}
+              >
+                Reset
+              </button>
+              <button
+                className="text-blue-400 hover:text-blue-300 underline"
+                onClick={downloadAll}
+                title={`Download all ${pdf.pageCount} pages in a ZIP file.`}
+              >
+                Download All
+              </button>
+            </>
           )}
         </div>
       </div>

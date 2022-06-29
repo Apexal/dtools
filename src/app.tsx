@@ -71,7 +71,7 @@ export function App() {
 
   return (
     <main>
-      <h1>PDF 2 PNG</h1>
+      <h1 class="text-3xl font-bold underline">PDF 2 PNG</h1>
       <input
         type="file"
         name="pdf-upload"

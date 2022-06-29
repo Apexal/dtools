@@ -28,7 +28,8 @@ type ConvertedPage = {
   error: Error | null;
 };
 
-function niceBytes(n: number) {
+/** Formats a number of bytes into a human-readable label. */
+function formatBytes(n: number) {
   const units = ["bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
   let l = 0;
   while (n >= 1024 && ++l) {
@@ -137,6 +138,7 @@ export function App() {
               if (!pngBlob) {
                 throw new Error("Failed to convert to PNG.");
               }
+
               convertedPage.size = pngBlob.size;
               convertedPage.blob = pngBlob;
               convertedPage.objectURL = URL.createObjectURL(pngBlob);
@@ -166,13 +168,16 @@ export function App() {
       [canvas, setPDF]
     );
 
+  /** Generates and prompts the user to download a ZIP file with all non-error page PNGs. */
   const downloadAll = useCallback(async () => {
     if (!pdf) return;
 
     const zip = new JSZip();
 
     for (const page of pdf.pages) {
-      zip.file(`${pdf.name}-page-${page.pageNumber}.png`, page.blob);
+      if (!page.error) {
+        zip.file(`${pdf.name}-page-${page.pageNumber}.png`, page.blob);
+      }
     }
     const content = await zip.generateAsync({ type: "blob" });
     saveAs(content, pdf.name + "-pages.zip");
@@ -239,9 +244,15 @@ export function App() {
                         backgroundImage: `url(${convertedPage.objectURL})`,
                       }}
                     >
-                      <span className="text-xs absolute left-1 bottom-1 rounded bg-slate-600 text-white px-1 opacity-80">
-                        {niceBytes(convertedPage.size)}
-                      </span>
+                      {convertedPage.error ? (
+                        <span className="text-xs absolute left-1 bottom-1 rounded bg-red-400 text-white px-1">
+                          error converting
+                        </span>
+                      ) : (
+                        <span className="text-xs absolute left-1 bottom-1 rounded bg-slate-600 text-white px-1 opacity-80">
+                          {formatBytes(convertedPage.size)}
+                        </span>
+                      )}
                     </div>
                     Page {convertedPage.pageNumber}
                   </a>

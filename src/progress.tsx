@@ -25,7 +25,7 @@ export default function Progress(props: {
         } absolute`}
       ></div>
       <div
-        className="h-full absolute transition-all duration-1000 bg-green-500"
+        class="h-full absolute transition-all duration-1000 bg-green-500"
         style={{ width: percent }}
       ></div>
       <div

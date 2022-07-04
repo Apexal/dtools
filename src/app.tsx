@@ -9,8 +9,8 @@ const baseURL = "/pdf-to-png";
 export function App() {
   return (
     <Router base={baseURL}>
-      <header className="bg-gray-800 p-6 text-white opacity-90 fixed top-0 left-0 w-screen z-10">
-        <nav className="container mx-auto flex space-x-8">
+      <header class="bg-gray-800 p-6 text-white opacity-90 fixed top-0 left-0 w-screen z-10">
+        <nav class="container mx-auto flex space-x-8">
           <Link href="/pdf-to-png">
             <a>PDF → PNGs</a>
           </Link>
@@ -24,7 +24,7 @@ export function App() {
           <Switch>
             <Route path="/pdf-to-png" component={PDFtoPNG} />
             <Route>
-              <p className="font-semibold">Page not found.</p>
+              <p class="font-semibold">Page not found.</p>
             </Route>
           </Switch>
         </CenterCard>

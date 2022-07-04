@@ -4,7 +4,7 @@ import { CenterCard } from "./components/CenterCard";
 import { PDFtoPNG } from "./pdftopng";
 
 /** From deployed GitHub Pages, url. Needs to match with value in vite.config.ts */
-const baseURL = "/pdf-to-png";
+const baseURL = "/dtools";
 
 export function App() {
   return (

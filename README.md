@@ -6,7 +6,7 @@ Simple static page using Preact and PDF.js to convert PDFs into PNG files all wi
 
 ## Deployment
 
-The site is automatically deployed to [apexal.github.io/pdf-to-png](https://apexal.github.io/pdf-to-png) on each push to master via a [GitHub Action](https://github.com/Apexal/pdf-to-png/actions).
+The site is automatically deployed to [apexal.github.io/dtools](https://apexal.github.io/dtools) on each push to master via a [GitHub Action](https://github.com/Apexal/dtools/actions).
 
 ## Planned Features
 
